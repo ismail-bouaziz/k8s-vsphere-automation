@@ -1,25 +1,4 @@
 [nodes]
-; master ansible_user=awx ansible_become_password=root ansible_become_method=su
+master ansible_user=awx ansible_become_password=root ansible_become_method=su
 worker2 ansible_user=awx ansible_become_password=root ansible_become_method=su
 worker1 ansible_user=awx ansible_become_password=root ansible_become_method=su
-
-[all-nodes]
-master-3 ansible_user=cloud-user
-master-2 ansible_user=cloud-user
-vip-k8s-master ansible_user=cloud-user
-worker-3 ansible_user=cloud-user
-worker-2 ansible_user=cloud-user
-worker-1 ansible_user=cloud-user
-
-[master-node]
-master-3 ansible_user=cloud-user
-master-2 ansible_user=cloud-user
-vip-k8s-master ansible_user=cloud-user
-
-[worker-node]
-worker-3 ansible_user=cloud-user
-worker-2 ansible_user=cloud-user
-worker-1 ansible_user=cloud-user
-
-[nfs]
-nfs  ansible_user=cloud-user
