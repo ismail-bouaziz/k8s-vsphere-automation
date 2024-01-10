@@ -1,0 +1,15 @@
+---
+- name: Add Public Key.
+  hosts: vip-k8s-master
+  gather_facts: no
+  vars_prompt:
+    - name: "public_key"
+      prompt: "Enter the public public_key"
+      private: no
+  tasks:
+    - name: Insert Public Key to authorized_keys file. 
+      blockinfile:
+        create: yes
+        insertafter: EOF
+        path: /home/cloud-user/.ssh/authorized_keys
+        block: "{{ public_key }}"
