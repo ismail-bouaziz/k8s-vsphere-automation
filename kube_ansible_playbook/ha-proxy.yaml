@@ -1,0 +1,43 @@
+---
+- name: Setup ha-proxy.
+  hosts: master-node
+  become: yes
+  tasks:
+    - name: install ha-proxy.
+      yum:
+        name: haproxy
+        state: present
+    - name: Bacup config file.
+      copy:
+        src: /etc/haproxy/haproxy.cfg
+        dest: /etc/haproxy/haproxy.cfg-org
+        remote_src: yes
+    - name: delete defaults content.
+      replace:
+        path: /etc/haproxy/haproxy.cfg 
+        regexp: '^\# main frontend which proxys to the backends[^[]+'
+        replace: |
+          # apiserver frontend which proxys to the masters
+          #---------------------------------------------------------------------
+          frontend apiserver
+              bind *:8443
+              mode tcp
+              option tcplog
+              default_backend apiserver
+          #---------------------------------------------------------------------
+          # round robin balancing for apiserver
+          #---------------------------------------------------------------------
+          backend apiserver
+              option httpchk GET /healthz
+              http-check expect status 200
+              mode tcp
+              option ssl-hello-chk
+              balance     roundrobin
+                  server master-1 10.10.10.88:6443 check
+                  server master-2 10.10.10.249:6443 check
+                  server master-3 10.10.10.212:6443 check
+    - name: Enable haproxy
+      service:
+        name: haproxy
+        enabled: yes
+        state: started

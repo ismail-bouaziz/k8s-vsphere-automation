@@ -1,0 +1,27 @@
+---
+- name: Bootstrap kube.
+  hosts: vip-k8s-master
+  become: yes
+  tasks:
+    - name: Bootstrap cluster with kubeadm init.
+      shell: sudo kubeadm init --control-plane-endpoint "vip-k8s-master:8443" --upload-certs
+      register: kubeadm_output
+
+    - name: Save output to a file
+      copy:
+        content: "{{ kubeadm_output.stdout_lines }}"
+        dest: kube-join.json
+
+    - name: create .kube dir.
+      file:
+        path: /root/.kube
+        state: directory
+
+    - name: Copy kube_config file.
+      copy:
+        src: /etc/kubernetes/admin.conf
+        dest: /root/.kube/config       
+    
+    - name: Create calico network.
+      ansible.builtin.shell: 
+        command: kubectl apply -f https://docs.projectcalico.org/v3.25/manifests/calico.yaml

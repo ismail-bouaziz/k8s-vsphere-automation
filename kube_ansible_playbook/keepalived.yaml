@@ -1,0 +1,174 @@
+---
+- name: Setup keepalived.
+  hosts: master-node
+  gather_facts: no
+  become: yes
+  tasks:
+    - name: install keepalived.
+      yum:
+        name: keepalived
+        state: present
+    - name: Add check apiserver script.
+      blockinfile: 
+        path: /etc/keepalived/check_apiserver.sh
+        create: yes
+        owner: root
+        group: root
+        mode: 0755
+        block: |
+          #!/bin/sh
+          APISERVER_VIP=10.112.61.245
+          APISERVER_DEST_PORT=6443
+
+          errorExit() {
+              echo "*** $*" 1>&2
+              exit 1
+          }
+
+          curl --silent --max-time 2 --insecure https://localhost:${APISERVER_DEST_PORT}/ -o /dev/null || errorExit "Error GET https://localhost:${APISERVER_DEST_PORT}/"
+          if ip addr | grep -q ${APISERVER_VIP}; then
+              curl --silent --max-time 2 --insecure https://${APISERVER_VIP}:${APISERVER_DEST_PORT}/ -o /dev/null || errorExit "Error GET https://${APISERVER_VIP}:${APISERVER_DEST_PORT}/"
+          fi
+    - name: Create a backup file.
+      copy:
+        src: /etc/keepalived/keepalived.conf
+        dest: /etc/keepalived/keepalived.conf-org
+        remote_src: yes
+    - name: Empty /etc/keepalived/keepalived.conf
+      copy:
+        dest: /etc/keepalived/keepalived.conf
+        content: ""
+#------------------Configure keepalived master-1------------------------#
+- name: Configure keepalived master-1.
+  hosts: vip-k8s-master
+  become: yes
+  tasks:
+    - name: set config to keepalived.
+      blockinfile: 
+        path: /etc/keepalived/keepalived.conf
+        state: present
+        block: |
+          ! /etc/keepalived/keepalived.conf
+          ! Configuration File for keepalived
+          global_defs {
+              router_id LVS_DEVEL
+          }
+          vrrp_script check_apiserver {
+            script "/etc/keepalived/check_apiserver.sh"
+            interval 3
+            weight -2
+            fall 10
+            rise 2
+          }
+
+          vrrp_instance VI_1 {
+              state MASTER
+              interface eth0
+              virtual_router_id 151
+              priority 255
+              authentication {
+                  auth_type PASS
+                  auth_pass keepalived
+              }
+              virtual_ipaddress {
+                  10.112.61.245/24
+              }
+              track_script {
+                  check_apiserver
+              }
+          }
+    - name: Enable keepalived
+      service:
+        name: keepalived
+        enabled: yes
+        state: started
+#------------------Configure keepalived master-2------------------------#
+- name: Configure keepalived master-2.
+  hosts: master-2
+  become: yes
+  tasks:
+    - name: set config to keepalived.
+      blockinfile: 
+        path: /etc/keepalived/keepalived.conf
+        state: present
+        block: |
+          ! /etc/keepalived/keepalived.conf
+          ! Configuration File for keepalived
+          global_defs {
+              router_id LVS_DEVEL
+          }
+          vrrp_script check_apiserver {
+            script "/etc/keepalived/check_apiserver.sh"
+            interval 3
+            weight -2
+            fall 10
+            rise 2
+          }
+
+          vrrp_instance VI_1 {
+              state SLAVE
+              interface eth0
+              virtual_router_id 151
+              priority 254
+              authentication {
+                  auth_type PASS
+                  auth_pass keepalived
+              }
+              virtual_ipaddress {
+                  10.112.61.245/24
+              }
+              track_script {
+                  check_apiserver
+              }
+          }
+    - name: Enable keepalived
+      service:
+        name: keepalived
+        enabled: yes
+        state: started
+#------------------Configure keepalived master-3------------------------#
+- name: Configure keepalived master-3.
+  hosts: master-3
+  become: yes
+  tasks:
+    - name: set config to keepalived.
+      blockinfile: 
+        path: /etc/keepalived/keepalived.conf
+        state: present
+        block: |
+          ! /etc/keepalived/keepalived.conf
+          ! Configuration File for keepalived
+          global_defs {
+              router_id LVS_DEVEL
+          }
+          vrrp_script check_apiserver {
+            script "/etc/keepalived/check_apiserver.sh"
+            interval 3
+            weight -2
+            fall 10
+            rise 2
+          }
+
+          vrrp_instance VI_1 {
+              state SLAVE
+              interface eth0
+              virtual_router_id 151
+              priority 253
+              authentication {
+                  auth_type PASS
+                  auth_pass keepalived
+              }
+              virtual_ipaddress {
+                  10.112.61.245/24
+              }
+              track_script {
+                  check_apiserver
+              }
+          }
+    - name: Enable keepalived
+      service:
+        name: keepalived
+        enabled: yes
+        state: started
+    
+        
